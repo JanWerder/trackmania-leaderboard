@@ -7,7 +7,7 @@ You need to have [bun.sh](https://bun.sh/) installed on your machine.
 You also need an environment file with the following variables:
 ```bash
 # .env
-userpw=<youremail:yourpassword>
+userpw=<youremail:yourpassword as base64>
 groupid=22024
 ```
 
