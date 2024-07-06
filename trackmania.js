@@ -185,16 +185,16 @@ const server = Bun.serve({
                         ${(function fun() {
                 let rows = "";
                 allMonth.forEach(day => {
-                    let leaderboard = `<ul class="space-y-1">`
+                    let leaderboard = `<table class="w-full table-auto">`
                     day.leaderboard.forEach(entry => {
-                        leaderboard += `<li class="flex items-center"><span class="w-6 h-6 mr-2 inline-flex items-center justify-center bg-blue-500 rounded-full text-xs font-bold">${entry.position}</span> ${entry.name} - ${entry.score} (${entry.medal})</li>`;
+                        leaderboard += `<tr><td><span class="w-6 h-6 mr-2 inline-flex items-center justify-center bg-blue-500 rounded-full text-xs font-bold">${entry.position}</span></td> <td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${entry.name}</td><td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${entry.score}s</td><td> (${entry.medal})</td></tr>`;
                     });
-                    leaderboard += `</ul>`;
+                    leaderboard += `</table>`;
 
                     let times = `<ul class="space-y-1">`;
-                    times += `<li class="flex items-center"><span class="w-4 h-4 mr-2 inline-flex items-center justify-center bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">G</span>${day.times.gold} s</li>`;
-                    times += `<li class="flex items-center"><span class="w-4 h-4 mr-2 inline-flex items-center justify-center bg-gray-300 text-gray-800 rounded-full text-xs font-bold">S</span>${day.times.silver} s</li>`;
-                    times += `<li class="flex items-center"><span class="w-4 h-4 mr-2 inline-flex items-center justify-center bg-yellow-600 text-yellow-100 rounded-full text-xs font-bold">B</span>${day.times.bronze} s</li>`;
+                    times += `<li class="flex items-center"><span class="w-4 h-4 mr-2 inline-flex items-center justify-center bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold">G</span>${day.times.gold}s</li>`;
+                    times += `<li class="flex items-center"><span class="w-4 h-4 mr-2 inline-flex items-center justify-center bg-gray-300 text-gray-800 rounded-full text-xs font-bold">S</span>${day.times.silver}s</li>`;
+                    times += `<li class="flex items-center"><span class="w-4 h-4 mr-2 inline-flex items-center justify-center bg-yellow-600 text-yellow-100 rounded-full text-xs font-bold">B</span>${day.times.bronze}s</li>`;
                     times += `</ul>`;
 
                     rows += `<tr class="border-b border-gray-700">
