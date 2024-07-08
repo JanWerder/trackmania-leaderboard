@@ -80,7 +80,8 @@ async function getCompleteMonth(token) {
             const times = {
                 gold: data.goldTime / 1000,
                 silver: data.silverTime / 1000,
-                bronze: data.bronzeTime / 1000
+                bronze: data.bronzeTime / 1000,
+                author: data.authorTime / 1000
             };
             leaderboard[day.day].times = times;
         });
@@ -90,7 +91,9 @@ async function getCompleteMonth(token) {
 
     leaderboard.forEach(day => {
         day.leaderboard.forEach(entry => {
-            if (entry.score <= day.times.gold) {
+            if (entry.score <= day.times.author) {
+                entry.medal = "🏎️";
+            } else if (entry.score <= day.times.gold) {
                 entry.medal = "🥇";
             } else if (entry.score <= day.times.silver) {
                 entry.medal = "🥈";
@@ -123,7 +126,9 @@ const server = Bun.serve({
                     player = { name: entry.name, medalScore: 0, placeScore: 0, totalScore: 0 };
                     leaderboard.push(player);
                 }
-                if (entry.score <= day.times.gold) {
+                if (entry.score <= day.times.author) {
+                    player.medalScore += 4;
+                } else if (entry.score <= day.times.gold) {
                     player.medalScore += 3;
                 } else if (entry.score <= day.times.silver) {
                     player.medalScore += 2;
