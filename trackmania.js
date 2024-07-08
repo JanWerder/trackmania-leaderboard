@@ -130,12 +130,14 @@ const server = Bun.serve({
                 } else if (entry.score <= day.times.bronze) {
                     player.medalScore += 1;
                 }
-		player.placeScore += (3 - entry.position);
+                player.placeScore += (3 - entry.position);
             });
         });
-	leaderboard.forEach(entry => {
-	    entry.totalScore = entry.medalScore + entry.placeScore;
-	}
+
+        leaderboard.forEach(entry => {
+            entry.totalScore = entry.medalScore + entry.placeScore;
+        });
+
         leaderboard.sort((a, b) => b.totalScore - a.totalScore);
 
         let page = `
@@ -167,7 +169,7 @@ const server = Bun.serve({
                     rows += `<tr class="border-b border-gray-700">
                                     <td class="px-4 py-2 text-center">${entry.name}</td>
                                     <td class="px-4 py-2 text-center">${entry.medalScore}</td>                                    
-				    <td class="px-4 py-2 text-center">${entry.placeScore}</td>
+				                    <td class="px-4 py-2 text-center">${entry.placeScore}</td>
                                     <td class="px-4 py-2 text-center">${entry.totalScore}</td>
                                 </tr>
                                 `;
