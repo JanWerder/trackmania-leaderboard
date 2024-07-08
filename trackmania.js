@@ -120,19 +120,23 @@ const server = Bun.serve({
             day.leaderboard.forEach(entry => {
                 let player = leaderboard.find(player => player.name === entry.name);
                 if (!player) {
-                    player = { name: entry.name, score: 0 };
+                    player = { name: entry.name, medalScore: 0, placeScore: 0, totalScore: 0 };
                     leaderboard.push(player);
                 }
                 if (entry.score <= day.times.gold) {
-                    player.score += 3;
+                    player.medalScore += 3;
                 } else if (entry.score <= day.times.silver) {
-                    player.score += 2;
+                    player.medalScore += 2;
                 } else if (entry.score <= day.times.bronze) {
-                    player.score += 1;
+                    player.medalScore += 1;
                 }
+		player.placeScore += (3 - entry.position);
             });
         });
-        leaderboard.sort((a, b) => b.score - a.score);
+	leaderboard.forEach(entry => {
+	    entry.totalScore = entry.medalScore + entry.placeScore;
+	}
+        leaderboard.sort((a, b) => b.totalScore - a.totalScore);
 
         let page = `
         <html>
@@ -151,7 +155,9 @@ const server = Bun.serve({
                         <thead class="bg-blue-600 text-white">
                             <tr>
                                 <th class="px-4 py-2">Name</th>
-                                <th class="px-4 py-2">Points</th>
+                                <th class="px-4 py-2">Medal Points</th>                                
+				<th class="px-4 py-2">Placement Points</th>                           
+				<th class="px-4 py-2">Combined Points</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -160,7 +166,9 @@ const server = Bun.serve({
                 leaderboard.forEach(entry => {
                     rows += `<tr class="border-b border-gray-700">
                                     <td class="px-4 py-2 text-center">${entry.name}</td>
-                                    <td class="px-4 py-2 text-center">${entry.score}</td>
+                                    <td class="px-4 py-2 text-center">${entry.medalScore}</td>                                    
+				    <td class="px-4 py-2 text-center">${entry.placeScore}</td>
+                                    <td class="px-4 py-2 text-center">${entry.totalScore}</td>
                                 </tr>
                                 `;
                 });
