@@ -44,7 +44,7 @@ async function getCompleteMonth(token) {
     });
 
     const data1 = await response1.json();
-    const leaderboardPromises = data1.monthList[0].days.map(day => {
+    const leaderboardPromises = data1.monthList[0].days.filter(day => day.mapUid !== "").map(day => {
         return fetch(`https://live-services.trackmania.nadeo.live/api/token/leaderboard/group/Personal_Best/map/${day.mapUid}/club/${groupId}/top?length=10&offset=0`, {
             method: 'GET',
             headers: {
@@ -57,7 +57,7 @@ async function getCompleteMonth(token) {
                 const memberName = memberMap[memberId] || memberId;
                 return { position: entry.position, name: memberName, score: entry.score / 1000 };
             }) || [];
-            return { day: day.day, monthDay: day.monthDay, mapUid: day.mapUid, campaignId: day.campaignId, leaderboard: dayLeaderboard };
+            return { monthDay: day.monthDay, mapUid: day.mapUid, campaignId: day.campaignId, leaderboard: dayLeaderboard };
         });
     });
 
@@ -65,7 +65,7 @@ async function getCompleteMonth(token) {
     const leaderboard = [];
     leaderboardResults.forEach(result => {
         if (result.mapUid !== "") {
-            leaderboard[result.day] = { day: result.day, mapUid: result.mapUid, leaderboard: result.leaderboard };
+            leaderboard[result.monthDay] = { day: result.monthDay, mapUid: result.mapUid, leaderboard: result.leaderboard };
         }
     });
 
@@ -213,7 +213,7 @@ const server = Bun.serve({
                     times += `</ul>`;
 
                     rows += `<tr class="border-b border-gray-700">
-                                    <td class="px-4 py-2 text-center">${day.day + 1}</td>
+                                    <td class="px-4 py-2 text-center">${day.day}</td>
                                     <td class="px-4 py-2 text-center">${times}</td>
                                     <td class="px-4 py-2 text-center">${leaderboard}</td>    
                                 </tr>
