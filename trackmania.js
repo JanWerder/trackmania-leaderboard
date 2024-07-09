@@ -108,6 +108,17 @@ async function getCompleteMonth(token) {
     return leaderboard;
 }
 
+function formatTime(timeInSeconds) {
+    let seconds = parseFloat(timeInSeconds);
+    if (seconds < 60) {
+        return seconds.toFixed(3);
+    } else {
+        let minutes = Math.floor(seconds / 60);
+        seconds = (seconds % 60).toFixed(3);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(6, '0')}`;
+    }
+}
+
 const server = Bun.serve({
     port: 3015,
     async fetch(request) {
@@ -202,7 +213,7 @@ const server = Bun.serve({
                 allMonth.forEach(day => {
                     let leaderboard = `<table class="w-full table-auto">`
                     day.leaderboard.forEach(entry => {
-                        leaderboard += `<tr><td><span class="w-6 h-6 mr-2 inline-flex items-center justify-center bg-blue-500 rounded-full text-xs font-bold">${entry.position}</span></td> <td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${entry.name}</td><td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${entry.score}s</td><td> (${entry.medal})</td></tr>`;
+                        leaderboard += `<tr><td><span class="w-6 h-6 mr-2 inline-flex items-center justify-center bg-blue-500 rounded-full text-xs font-bold">${entry.position}</span></td> <td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${entry.name}</td><td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${formatTime(entry.score)}s</td><td> (${entry.medal})</td></tr>`;
                     });
                     leaderboard += `</table>`;
 
