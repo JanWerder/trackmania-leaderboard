@@ -168,14 +168,14 @@ const server = Bun.serve({
             <div class="container w-full md:w-1/2 mx-auto px-4 py-8">
                 <h1 class="text-4xl font-bold text-center text-blue-400 mb-8">Trackmania Leaderboard</h1>
 
-                <div class="bg-gray-800 shadow-lg rounded-lg overflow-hidden mb-8 md:w-1/2 mx-auto">
+                <div class="bg-gray-800 shadow-lg rounded-lg overflow-hidden mb-8 md:w-2/3 mx-auto">
                     <table class="w-full table-auto">
                         <thead class="bg-blue-600 text-white">
                             <tr>
                                 <th class="px-4 py-2">Name</th>
-                                <th class="px-4 py-2">Medal Points</th>                                
-				<th class="px-4 py-2">Placement Points</th>                           
-				<th class="px-4 py-2">Combined Points</th>
+                                <th class="px-2 py-2">Medal Points</th>                                
+				<th class="px-2 py-2">Placement Points</th>                           
+				<th class="px-2 py-2">Combined Points</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -184,9 +184,9 @@ const server = Bun.serve({
                 leaderboard.forEach(entry => {
                     rows += `<tr class="border-b border-gray-700">
                                     <td class="px-4 py-2 text-center">${entry.name}</td>
-                                    <td class="px-4 py-2 text-center">${entry.medalScore}</td>                                    
-				                    <td class="px-4 py-2 text-center">${entry.placeScore}</td>
-                                    <td class="px-4 py-2 text-center">${entry.totalScore}</td>
+                                    <td class="px-2 py-2 text-center">${entry.medalScore}</td>                                    
+				    <td class="px-2 py-2 text-center">${entry.placeScore}</td>
+                                    <td class="px-2 py-2 text-center">${entry.totalScore}</td>
                                 </tr>
                                 `;
                 });
