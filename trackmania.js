@@ -213,7 +213,7 @@ const server = Bun.serve({
                 allMonth.forEach(day => {
                     let leaderboard = `<table class="w-full table-auto">`
                     day.leaderboard.forEach(entry => {
-                        leaderboard += `<tr><td><span class="w-6 h-6 mr-2 inline-flex items-center justify-center bg-blue-500 rounded-full text-xs font-bold">${entry.position}</span></td> <td class="${entry.medal === '🥇' || entry.medal === '🏎️' ? 'font-bold' : ''}">${entry.name}</td><td class="${entry.medal === '🥇' ? 'font-bold' : ''}">${formatTime(entry.score)}s</td><td> (${entry.medal})</td></tr>`;
+                        leaderboard += `<tr><td><span class="w-6 h-6 mr-2 inline-flex items-center justify-center bg-blue-500 rounded-full text-xs font-bold">${entry.position}</span></td> <td class="${entry.medal === '🥇' || entry.medal === '🏎️' ? 'font-bold' : ''}">${entry.name}</td><td class="${entry.medal === '🥇' || entry.medal === '🏎️' ? 'font-bold' : ''}">${formatTime(entry.score)}s</td><td> (${entry.medal})</td></tr>`;
                     });
                     leaderboard += `</table>`;
 
