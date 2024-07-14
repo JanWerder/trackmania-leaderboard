@@ -65,7 +65,7 @@ async function getCompleteMonth(token) {
     const leaderboard = [];
     leaderboardResults.forEach(result => {
         if (result.mapUid !== "") {
-            leaderboard[result.monthDay] = { day: result.monthDay, mapUid: result.mapUid, leaderboard: result.leaderboard };
+            leaderboard[result.monthDay] = { monthDay: result.monthDay, mapUid: result.mapUid, leaderboard: result.leaderboard };
         }
     });
 
@@ -83,7 +83,8 @@ async function getCompleteMonth(token) {
                 bronze: data.bronzeTime / 1000,
                 author: data.authorTime / 1000
             };
-            leaderboard[day.day].times = times;
+            leaderboard[day.monthDay].times = times;
+            leaderboard[day.monthDay].thumbnailUrl = data.thumbnailUrl;
         });
     });
 
@@ -224,9 +225,9 @@ const server = Bun.serve({
                     times += `</ul>`;
 
                     rows += `<tr class="border-b border-gray-700">
-                                    <td class="px-4 py-2 text-center">${day.day}</td>
-                                    <td class="px-4 py-2 text-center">${times}</td>
-                                    <td class="px-4 py-2 text-center">${leaderboard}</td>    
+                                    <td class="px-4 py-2 w-1/4 text-center bg-clip-content bg-auto bg-contain bg-no-repeat bg-center text-2xl font-extrabold rounded-xl" style="background-image: url(${day.thumbnailUrl})"><span class="bg-clip-text text-transparent bg-white">${day.monthDay}</span></td>
+                                    <td class="px-4 py-2 w-1/4 text-center">${times}</td>
+                                    <td class="px-4 py-2 w-1/2 text-center">${leaderboard}</td>    
                                 </tr>
                                 `;
                 });
