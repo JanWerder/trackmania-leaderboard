@@ -10,7 +10,8 @@ async function getAuthToken() {
         headers: {
             'Content-Type': 'application/json',
             'Ubi-AppId': '86263886-327a-4328-ac69-527f0d20a237',
-            'Authorization': `Basic ${process.env.userpw}`
+            'Authorization': `Basic ${process.env.userpw}`,
+            'User-Agent': 'Local Leaderboard'
         },
         body: JSON.stringify({ "audience": "NadeoLiveServices" })
     });
@@ -25,7 +26,8 @@ async function getAuthToken() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `ubi_v1 t=${data1.ticket}`
+            'Authorization': `ubi_v1 t=${data1.ticket}`,
+            'User-Agent': 'Local Leaderboard'
         },
         body: JSON.stringify({ "audience": "NadeoLiveServices" })
     });
@@ -39,7 +41,8 @@ async function getCompleteMonth(token) {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `nadeo_v1 t=${token}`
+            'Authorization': `nadeo_v1 t=${token}`,
+            'User-Agent': 'Local Leaderboard'
         }
     });
 
@@ -49,7 +52,8 @@ async function getCompleteMonth(token) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `nadeo_v1 t=${token}`
+                'Authorization': `nadeo_v1 t=${token}`,
+                'User-Agent': 'Local Leaderboard'
             }
         }).then(response => response.json()).then(data2 => {
             const dayLeaderboard = data2.top?.map(entry => {
@@ -65,30 +69,32 @@ async function getCompleteMonth(token) {
     const leaderboard = [];
     leaderboardResults.forEach(result => {
         if (result.mapUid !== "") {
-            leaderboard[result.monthDay] = { monthDay: result.monthDay, mapUid: result.mapUid, leaderboard: result.leaderboard };
+            leaderboard[result.monthDay - 1] = { monthDay: result.monthDay, mapUid: result.mapUid, leaderboard: result.leaderboard };
         }
     });
 
-    const timePromises = leaderboard.map(day => {
-        return fetch(`https://live-services.trackmania.nadeo.live/api/token/map/${day.mapUid}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `nadeo_v1 t=${token}`
-            }
-        }).then(response => response.json()).then(data => {
+    const mapCommaList = leaderboard.map(day => day.mapUid).join(',');
+
+    await fetch(`https://live-services.trackmania.nadeo.live/api/token/map/get-multiple?mapUidList=${mapCommaList}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `nadeo_v1 t=${token}`,
+            'User-Agent': 'Local Leaderboard'
+        }
+    }).then(response => response.json()).then(data => {
+        data.mapList.forEach(map => {
             const times = {
-                gold: data.goldTime / 1000,
-                silver: data.silverTime / 1000,
-                bronze: data.bronzeTime / 1000,
-                author: data.authorTime / 1000
+                gold: map.goldTime / 1000,
+                silver: map.silverTime / 1000,
+                bronze: map.bronzeTime / 1000,
+                author: map.authorTime / 1000
             };
-            leaderboard[day.monthDay].times = times;
-            leaderboard[day.monthDay].thumbnailUrl = data.thumbnailUrl;
+            const monthDay = leaderboard.find(e => e.mapUid == map.uid).monthDay;
+            leaderboard[monthDay - 1].times = times;
+            leaderboard[monthDay - 1].thumbnailUrl = map.thumbnailUrl;
         });
     });
-
-    await Promise.all(timePromises);
 
     leaderboard.forEach(day => {
         day.leaderboard.forEach(entry => {
@@ -158,14 +164,16 @@ const server = Bun.serve({
         leaderboard.sort((a, b) => b.totalScore - a.totalScore);
 
         let page = `
-        <html>
+        <html class="bg-slate-950">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Trackmania Leaderboard</title>
             <script src="https://cdn.tailwindcss.com"></script>
         </head>
-        <body class="bg-gray-900 text-gray-100 font-sans">
+        <body class="bg-transparent text-gray-100 font-sans">
+            <div class="absolute bottom-0 left-[-20%] right-0 top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
+            <div class="absolute bottom-0 right-[-20%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
             <div class="container w-full md:w-1/2 mx-auto px-4 py-8">
                 <h1 class="text-4xl font-bold text-center text-blue-400 mb-8">Trackmania Leaderboard</h1>
 
@@ -203,9 +211,9 @@ const server = Bun.serve({
                     <table class="w-full table-auto">
                         <thead class="bg-green-600 text-white">
                             <tr>
-                                <th class="px-4 py-2 w-2">#</th>
-                                <th class="px-4 py-2 text-left">Map Times</th>
-                                <th class="px-4 py-2 text-left">Leaderboard</th>
+                                <th class="px-2 py-2 w-2">#</th>
+                                <th class="px-2 py-2 text-left">Map Times</th>
+                                <th class="px-2 py-2 text-left">Leaderboard</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -225,9 +233,9 @@ const server = Bun.serve({
                     times += `</ul>`;
 
                     rows += `<tr class="border-b border-gray-700">
-                                    <td class="px-4 py-2 w-1/4 text-center bg-clip-content bg-auto bg-contain bg-no-repeat bg-center text-2xl font-extrabold rounded-xl" style="background-image: url(${day.thumbnailUrl})"><span class="bg-clip-text text-transparent bg-white">${day.monthDay}</span></td>
-                                    <td class="px-4 py-2 w-1/4 text-center">${times}</td>
-                                    <td class="px-4 py-2 w-1/2 text-center">${leaderboard}</td>    
+                                    <td class="px-2 py-2 w-1/4 text-center bg-clip-content bg-cover bg-contain bg-no-repeat bg-center text-2xl font-extrabold" style="background-image: url(${day.thumbnailUrl})"><span class="bg-clip-text text-transparent bg-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">${day.monthDay}</span></td>
+                                    <td class="px-2 py-2 w-1/4 text-center">${times}</td>
+                                    <td class="px-2 py-2 w-1/2 text-center">${leaderboard}</td>    
                                 </tr>
                                 `;
                 });
@@ -236,7 +244,7 @@ const server = Bun.serve({
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div>    
         </body>
         </html>
         `;
