@@ -172,8 +172,8 @@ const server = Bun.serve({
             <script src="https://cdn.tailwindcss.com"></script>
         </head>
         <body class="bg-transparent text-gray-100 font-sans">
-            <div class="absolute bottom-0 left-[-20%] right-0 top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
-            <div class="absolute bottom-0 right-[-20%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
+            <div class="absolute bottom-0 left-[0%] right-0 top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
+            <div class="absolute bottom-0 right-[0%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
             <div class="container w-full md:w-1/2 mx-auto px-4 py-8">
                 <h1 class="text-4xl font-bold text-center text-blue-400 mb-8">Trackmania Leaderboard</h1>
 
