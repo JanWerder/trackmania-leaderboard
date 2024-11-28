@@ -237,6 +237,66 @@ function getLongestEndurance(db) {
     `).all();
 }
 
+function getLongestStreak(db) {
+    return db.prepare(`
+        WITH numbered_runs AS (
+            -- Number each run chronologically
+            SELECT 
+                r.user_id,
+                r.map_uid,
+                r.medal,
+                r.time,
+                m.thumbnail_url,
+                m.day,
+                m.month,
+                ROW_NUMBER() OVER (
+                    PARTITION BY r.user_id 
+                    ORDER BY m.month, m.day
+                ) as run_number
+            FROM runs r
+            JOIN maps m ON r.map_uid = m.uid
+            WHERE r.medal IN ('🥉', '🥈', '🥇', '🏎️')
+            AND m.year = 2024
+        ),
+        streak_groups AS (
+            -- Identify breaks in streaks
+            SELECT 
+                user_id,
+                map_uid,
+                medal,
+                time,
+                thumbnail_url,
+                day,
+                month,
+                run_number,
+                run_number - ROW_NUMBER() OVER (
+                    PARTITION BY user_id 
+                    ORDER BY run_number
+                ) as streak_group
+            FROM numbered_runs
+        ),
+        streaks AS (
+            -- Calculate streak lengths
+            SELECT 
+                user_id,
+                streak_group,
+                COUNT(*) as streak_length,
+                MIN(run_number) as streak_start,
+                MAX(run_number) as streak_end,
+                GROUP_CONCAT(map_uid || '|' || medal || '|' || time || '|' || thumbnail_url || '|' || day || '|' || month) as streak_details
+            FROM streak_groups
+            GROUP BY user_id, streak_group
+        )
+        SELECT 
+            user_id,
+            streak_length,
+            streak_details
+        FROM streaks
+        ORDER BY streak_length DESC
+        LIMIT 3
+    `).all();
+}
+
 function formatTime(timeInSeconds) {
     let seconds = timeInSeconds / 1000;
     if (seconds < 60) {
@@ -261,7 +321,8 @@ export async function generateWrappedReport() {
         completedMonths: getCompletedMonths(db),
         closeCalls: getCloseCalls(db),
         narrowVictories: getNarrowVictories(db),
-        longestEndurance: getLongestEndurance(db)
+        longestEndurance: getLongestEndurance(db),
+        longestStreak: getLongestStreak(db)
     };
 
     const html = `
@@ -322,6 +383,42 @@ export async function generateWrappedReport() {
 
                 .track-thumbnail:hover {
                     transform: scale(1.05);
+                }
+
+                @keyframes victory-gap {
+                    0%, 100% { opacity: 0; }
+                    50% { opacity: 1; }
+                }
+
+                .animate-victory-gap {
+                    animation: victory-gap 1s infinite;
+                }
+
+                .animate-pulse {
+                    animation: pulse 1s infinite;
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 0.5; }
+                    50% { opacity: 1; }
+                }
+
+                @keyframes reference-flash {
+                    0%, 100% { background-color: rgb(75, 85, 99); }  /* gray-600 */
+                    50% { background-color: white; }
+                }
+
+                @keyframes gap-flash {
+                    0%, 50%, 100% { background-color: rgb(75, 85, 99); }  /* gray-600 */
+                    1%, 1.1% { background-color: white; }
+                }
+
+                .animate-reference {
+                    animation: reference-flash 1s infinite;
+                }
+
+                .animate-gap {
+                    animation: gap-flash 2s infinite;  /* Changed to 2s to ensure 1s gap between flashes */
                 }
             </style>
         </head>
@@ -450,16 +547,37 @@ export async function generateWrappedReport() {
                     <h2 class="text-3xl font-bold mb-6 text-blue-300">📅 Monthly Completionist</h2>
                     <p class="text-gray-400 mb-4">Players who completed all tracks in a month with at least a bronze medal.</p>
                     <div class="bg-gray-700/50 rounded-lg p-6">
-                        <ol class="space-y-4">
-                            ${awards.completedMonths.map((user, index) => `
-                                <li class="flex justify-between items-center ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-yellow-600'}">
-                                    <div>
-                                        <span class="text-xl">${index + 1}. ${memberMap[user.user_id]}</span>
-                                        <div class="text-sm opacity-75">Completed months: ${user.months_list.split(',').join(', ')}</div>
-                                    </div>
-                                    <span class="font-bold">${user.completed_months} month${user.completed_months !== 1 ? 's' : ''}</span>
-                                </li>
-                            `).join('')}
+                        <ol class="space-y-12">
+                            ${awards.completedMonths.map((user, index) => {
+                                const completedMonths = user.months_list.split(',').map(Number);
+                                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                return `
+                                    <li class="${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-yellow-600'}">
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <span class="text-2xl font-bold">${index + 1}. ${memberMap[user.user_id]}</span>
+                                            <span class="text-lg">(${user.completed_months} month${user.completed_months !== 1 ? 's' : ''})</span>
+                                        </div>
+                                        <div class="grid grid-cols-12 gap-3">
+                                            ${monthNames.map((monthName, idx) => `
+                                                <div class="relative group">
+                                                    <div class="aspect-square rounded-xl ${completedMonths.includes(idx + 1) 
+                                                        ? 'bg-gradient-to-br from-green-500/50 to-green-700/50 border-2 border-green-400/30' 
+                                                        : 'bg-gradient-to-br from-gray-600/30 to-gray-700/30 border-2 border-gray-500/20'} 
+                                                        flex flex-col items-center justify-center transition-all duration-200 
+                                                        ${completedMonths.includes(idx + 1) ? 'hover:from-green-400/60 hover:to-green-600/60' : 'hover:from-gray-500/40 hover:to-gray-600/40'}
+                                                        cursor-pointer shadow-lg hover:shadow-xl hover:scale-105">
+                                                        <span class="font-bold text-sm">${monthName}</span>
+                                                        <span class="text-xs opacity-75">${idx + 1}</span>
+                                                    </div>
+                                                    <div class="absolute -top-2 -right-2 ${completedMonths.includes(idx + 1) ? 'block' : 'hidden'}">
+                                                        <span class="text-lg">✓</span>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </li>
+                                `;
+                            }).join('')}
                         </ol>
                     </div>
                 </section>
@@ -527,6 +645,12 @@ export async function generateWrappedReport() {
                                                 <div class="text-sm opacity-75">${user.narrow_wins_count} cruel victor${user.narrow_wins_count !== 1 ? 'ies' : 'y'}</div>
                                                 <div class="text-sm opacity-75">Closest win: ${timeDiff.toFixed(3)}s gap</div>
                                                 <div class="text-sm opacity-75">Day ${day} of Month ${month}</div>
+                                                <div class="flex items-center gap-2 mt-2">
+                                                    <div class="w-3 h-3 rounded-full bg-gray-600 animate-reference"></div>
+                                                    <div class="w-3 h-3 rounded-full bg-gray-600 animate-gap" 
+                                                         style="animation-duration: ${timeDiff}s"></div>
+                                                    <span class="text-xs opacity-75">gap visualization</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="text-right">
@@ -561,6 +685,73 @@ export async function generateWrappedReport() {
                                     </div>
                                 </li>
                             `).join('')}
+                        </ol>
+                    </div>
+                </section>
+
+                <!-- Longest Streak Section -->
+                <section class="mb-16 bg-gray-800/50 rounded-xl p-8">
+                    <h2 class="text-3xl font-bold mb-6 text-blue-300">🔥 Longest Streak</h2>
+                    <p class="text-gray-400 mb-4">Most consecutive tracks completed with at least a bronze medal.</p>
+                    <div class="bg-gray-700/50 rounded-lg p-6">
+                        <ol class="space-y-8">
+                            ${awards.longestStreak.map((user, index) => {
+                                const allTracks = user.streak_details.split(',');
+                                const firstTrack = allTracks[0].split('|');
+                                const mapUid = firstTrack[0];
+                                const medal = firstTrack[1];
+                                const thumbnailUrl = firstTrack[3];
+                                const day = firstTrack[4];
+                                const month = firstTrack[5];
+                                
+                                // Create medal visualization
+                                const medalVisuals = allTracks.map(track => {
+                                    const [_, trackMedal] = track.split('|');
+                                    const medalColors = {
+                                        '🏎️': 'from-purple-500 to-purple-700',
+                                        '🥇': 'from-yellow-500 to-yellow-700',
+                                        '🥈': 'from-gray-300 to-gray-500',
+                                        '🥉': 'from-orange-700 to-orange-900'
+                                    };
+                                    return `
+                                        <div class="group relative">
+                                            <div class="w-4 h-8 rounded-full bg-gradient-to-b ${medalColors[trackMedal]} 
+                                                      transform transition-all duration-200 hover:scale-110 cursor-pointer">
+                                            </div>
+                                            <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 
+                                                      bg-gray-900 text-xs px-2 py-1 rounded opacity-0 
+                                                      group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                                ${trackMedal}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('');
+                                
+                                return `
+                                    <li class="${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-yellow-600'}">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <div class="flex items-center gap-4">
+                                                <img src="${thumbnailUrl}" class="w-16 h-16 rounded-lg object-cover track-thumbnail" />
+                                                <div>
+                                                    <span class="text-xl">${index + 1}. ${memberMap[user.user_id]}</span>
+                                                    <div class="text-sm opacity-75">${user.streak_length} tracks in a row</div>
+                                                    <div class="text-sm opacity-75">Started: Day ${day} of Month ${month}</div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-bold">Starting with Track ${mapUid}</div>
+                                                <div class="text-sm opacity-75">First medal: ${medal}</div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-4 p-4 bg-gray-800/50 rounded-xl">
+                                            <div class="text-sm opacity-75 mb-2">Medal streak visualization:</div>
+                                            <div class="flex gap-1 overflow-x-auto pb-2">
+                                                ${medalVisuals}
+                                            </div>
+                                        </div>
+                                    </li>
+                                `;
+                            }).join('')}
                         </ol>
                     </div>
                 </section>
