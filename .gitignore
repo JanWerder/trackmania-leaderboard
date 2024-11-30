@@ -131,3 +131,4 @@ dist
 .users.json
 wrapped.html
 trackmania_wrapped.db
+wrapped_*.html

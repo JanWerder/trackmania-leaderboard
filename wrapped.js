@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 
-function getMedalCounts(db) {
+function getMedalCounts(db, year) {
     return db.prepare(`
         SELECT 
             user_id,
@@ -9,13 +9,15 @@ function getMedalCounts(db) {
             SUM(CASE WHEN medal = '🥇' THEN 1 ELSE 0 END) as gold_count,
             SUM(CASE WHEN medal = '🏎️' THEN 1 ELSE 0 END) as author_count,
             COUNT(*) as total_tracks
-        FROM runs
+        FROM runs r
+        JOIN maps m ON r.map_uid = m.uid
+        WHERE m.year = ?
         GROUP BY user_id
         ORDER BY author_count DESC, gold_count DESC, silver_count DESC, bronze_count DESC
-    `).all();
+    `).all(year);
 }
 
-function getAverageMedal(db) {
+function getAverageMedal(db, year) {
     return db.prepare(`
         SELECT 
             user_id,
@@ -26,19 +28,23 @@ function getAverageMedal(db) {
                 WHEN medal = '🥉' THEN 1
                 ELSE 0 
             END) as avg_medal
-        FROM runs
+        FROM runs r
+        JOIN maps m ON r.map_uid = m.uid
+        WHERE m.year = ?
         GROUP BY user_id
         ORDER BY avg_medal DESC
-    `).all();
+    `).all(year);
 }
 
-function getEarliestSilver(db) {
+function getEarliestSilver(db, year) {
     // First get all users who have at least one silver+ medal
     const users = db.prepare(`
         SELECT DISTINCT user_id 
-        FROM runs 
-        WHERE medal IN ('🥈', '🥇', '🏎️')
-    `).all();
+        FROM runs r
+        JOIN maps m ON r.map_uid = m.uid
+        WHERE r.medal IN ('🥈', '🥇', '🏎️')
+        AND m.year = ?
+    `).all(year);
 
     // For each user, find their earliest silver+ medal
     const earliestMedals = users.map(user => {
@@ -55,10 +61,10 @@ function getEarliestSilver(db) {
             JOIN maps m ON r.map_uid = m.uid
             WHERE r.user_id = ?
             AND r.medal IN ('🥈', '🥇', '🏎️')
-            AND m.year = 2024
+            AND m.year = ?
             ORDER BY m.month ASC, m.day ASC
             LIMIT 1
-        `).get(user.user_id);
+        `).get(user.user_id, year);
     }).filter(Boolean); // Remove any null results
 
     // Sort by month and day to get overall ranking
@@ -70,14 +76,16 @@ function getEarliestSilver(db) {
     }).slice(0, 3); // Get top 3
 }
 
-function getBestOutlier(db) {
+function getBestOutlier(db, year) {
     return db.prepare(`
         WITH map_stats AS (
             SELECT 
                 map_uid,
                 AVG(time) as avg_time,
                 COUNT(*) as player_count
-            FROM runs
+            FROM runs r
+            JOIN maps m ON r.map_uid = m.uid
+            WHERE m.year = ?
             GROUP BY map_uid
             HAVING player_count = (SELECT COUNT(DISTINCT user_id) FROM runs)
         ),
@@ -93,6 +101,7 @@ function getBestOutlier(db) {
             FROM runs r
             JOIN map_stats ms ON r.map_uid = ms.map_uid
             JOIN maps m ON r.map_uid = m.uid
+            WHERE m.year = ?
         )
         SELECT 
             user_id,
@@ -105,16 +114,16 @@ function getBestOutlier(db) {
         FROM time_differences
         ORDER BY improvement_percent DESC
         LIMIT 3
-    `).all();
+    `).all(year, year);
 }
 
-function getCompletedMonths(db) {
+function getCompletedMonths(db, year) {
     return db.prepare(`
         WITH monthly_maps AS (
             -- Get total maps per month
             SELECT month, COUNT(*) as total_maps
             FROM maps
-            WHERE year = 2024
+            WHERE year = ?
             GROUP BY month
         ),
         user_monthly_completions AS (
@@ -125,7 +134,7 @@ function getCompletedMonths(db) {
                 COUNT(*) as completed_maps
             FROM runs r
             JOIN maps m ON r.map_uid = m.uid
-            WHERE m.year = 2024
+            WHERE m.year = ?
             AND r.medal IN ('🥉', '🥈', '🥇', '🏎️')
             GROUP BY r.user_id, m.month
         )
@@ -139,10 +148,10 @@ function getCompletedMonths(db) {
         GROUP BY umc.user_id
         ORDER BY completed_months DESC
         LIMIT 3
-    `).all();
+    `).all(year, year);
 }
 
-function getCloseCalls(db) {
+function getCloseCalls(db, year) {
     return db.prepare(`
         WITH close_calls AS (
             SELECT 
@@ -177,10 +186,10 @@ function getCloseCalls(db) {
         GROUP BY user_id
         ORDER BY close_calls_count DESC
         LIMIT 3
-    `).all();
+    `).all(year);
 }
 
-function getNarrowVictories(db) {
+function getNarrowVictories(db, year) {
     return db.prepare(`
         WITH ranked_times AS (
             -- Get first and second place for each map
@@ -217,10 +226,10 @@ function getNarrowVictories(db) {
         GROUP BY winner_id
         ORDER BY narrow_wins_count DESC
         LIMIT 3
-    `).all();
+    `).all(year);
 }
 
-function getLongestEndurance(db) {
+function getLongestEndurance(db, year) {
     return db.prepare(`
         SELECT 
             user_id,
@@ -232,12 +241,13 @@ function getLongestEndurance(db) {
             month
         FROM runs
         JOIN maps m ON runs.map_uid = m.uid
+        WHERE m.year = ?
         ORDER BY time DESC
         LIMIT 3
-    `).all();
+    `).all(year);
 }
 
-function getLongestStreak(db) {
+function getLongestStreak(db, year) {
     return db.prepare(`
         WITH numbered_runs AS (
             -- Number each run chronologically
@@ -256,7 +266,7 @@ function getLongestStreak(db) {
             FROM runs r
             JOIN maps m ON r.map_uid = m.uid
             WHERE r.medal IN ('🥉', '🥈', '🥇', '🏎️')
-            AND m.year = 2024
+            AND m.year = ?
         ),
         streak_groups AS (
             -- Identify breaks in streaks
@@ -294,7 +304,7 @@ function getLongestStreak(db) {
         FROM streaks
         ORDER BY streak_length DESC
         LIMIT 3
-    `).all();
+    `).all(year);
 }
 
 function formatTime(timeInSeconds) {
@@ -309,27 +319,28 @@ function formatTime(timeInSeconds) {
 }
 
 export async function generateWrappedReport() {
+    const currentYear = new Date().getFullYear();
     const db = new Database('trackmania_wrapped.db');
     const memberFile = Bun.file(".users.json");
     const memberMap = await memberFile.json();
     
     const awards = {
-        medalCounts: getMedalCounts(db),
-        averageMedal: getAverageMedal(db),
-        earliestSilver: getEarliestSilver(db),
-        bestOutlier: getBestOutlier(db),
-        completedMonths: getCompletedMonths(db),
-        closeCalls: getCloseCalls(db),
-        narrowVictories: getNarrowVictories(db),
-        longestEndurance: getLongestEndurance(db),
-        longestStreak: getLongestStreak(db)
+        medalCounts: getMedalCounts(db, currentYear),
+        averageMedal: getAverageMedal(db, currentYear),
+        earliestSilver: getEarliestSilver(db, currentYear),
+        bestOutlier: getBestOutlier(db, currentYear),
+        completedMonths: getCompletedMonths(db, currentYear),
+        closeCalls: getCloseCalls(db, currentYear),
+        narrowVictories: getNarrowVictories(db, currentYear),
+        longestEndurance: getLongestEndurance(db, currentYear),
+        longestStreak: getLongestStreak(db, currentYear)
     };
 
     const html = `
         <!DOCTYPE html>
         <html class="bg-slate-950">
         <head>
-            <title>Trackmania Wrapped 2024</title>
+            <title>Trackmania Wrapped ${currentYear}</title>
             <script src="https://cdn.tailwindcss.com"></script>
             <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
             <style>
@@ -430,7 +441,7 @@ export async function generateWrappedReport() {
             <div class="absolute bottom-0 right-[0%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle_farthest-side,rgba(255,0,182,.15),rgba(255,255,255,0))]"></div>
             
             <div class="container mx-auto px-4 py-8 relative">
-                <h1 class="text-6xl font-bold text-center text-blue-400 mb-12 animated-header">Trackmania Wrapped 2024</h1>
+                <h1 class="text-6xl font-bold text-center text-blue-400 mb-12 animated-header">Trackmania Wrapped ${currentYear}</h1>
                 
                 <!-- Medal Collection Section -->
                 <section class="mb-16 bg-gray-800/50 rounded-xl p-8">
@@ -494,7 +505,7 @@ export async function generateWrappedReport() {
                 <!-- Speed Demon Section -->
                 <section class="mb-16 bg-gray-800/50 rounded-xl p-8">
                     <h2 class="text-3xl font-bold mb-6 text-blue-300">⚡ Earliest Silver+ Medal</h2>
-                    <p class="text-gray-400 mb-4">First players to achieve a silver medal or better in 2024, ordered by month and day.</p>
+                    <p class="text-gray-400 mb-4">First players to achieve a silver medal or better in ${currentYear}, ordered by month and day.</p>
                     <div class="bg-gray-700/50 rounded-lg p-6">
                         <ol class="space-y-4">
                             ${awards.earliestSilver.map((user, index) => `

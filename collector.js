@@ -43,7 +43,8 @@ async function getAuthToken() {
 }
 
 export async function collectYearData() {
-    console.log("🎮 Starting Trackmania data collection for 2024");
+    const currentYear = new Date().getFullYear();
+    console.log(`🎮 Starting Trackmania data collection for ${currentYear}`);
     
     // Delete old database if it exists
     if (existsSync(DB_PATH)) {
@@ -58,10 +59,11 @@ export async function collectYearData() {
         throw new Error("Failed to get auth token");
     }
     
-    // Get all months of 2024
+    // Update the months loop to only get months up to current month
+    const currentMonth = new Date().getMonth(); // 0-based index
     console.log("📅 Fetching monthly campaigns...");
     const monthPromises = [];
-    for (let offset = 0; offset < 12; offset++) {
+    for (let offset = 0; offset <= currentMonth; offset++) {
         monthPromises.push(
             fetch('https://live-services.trackmania.nadeo.live/api/token/campaign/month?length=1&offset=' + offset, {
                 method: 'GET',
@@ -117,7 +119,7 @@ export async function collectYearData() {
             }
         ).then(r => r.json());
         
-        // Store map data
+        // Update map storage to use currentYear
         const stmt = db.prepare(`
             INSERT OR REPLACE INTO maps (uid, day, month, year, bronze_time, silver_time, gold_time, author_time, thumbnail_url)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -130,7 +132,7 @@ export async function collectYearData() {
                 map.uid,
                 dateInfo.monthDay,
                 dateInfo.month,
-                2024,
+                currentYear,
                 map.bronzeTime,
                 map.silverTime,
                 map.goldTime,
